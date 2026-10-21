@@ -11,11 +11,14 @@ class PacketError(ValueError):
     """Raised when a datagram is malformed or fails CRC validation."""
 
 
+# Encode fields consistently so the sender and receiver calculate the same CRC.
 def _canonical_bytes(fields: dict[str, Any]) -> bytes:
     return json.dumps(fields, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
 
+# Validate a packet, calculate its CRC-32, and serialize it as JSON bytes.
 def encode_packet(packet_type: str, run_id: str, seq: int, total: int, payload: str = "") -> bytes:
+    # Check required fields before building the serialized packet.
     if packet_type not in {"data", "ack"}:
         raise PacketError(f"unsupported packet type: {packet_type}")
     if not run_id or not isinstance(run_id, str):
@@ -34,13 +37,16 @@ def encode_packet(packet_type: str, run_id: str, seq: int, total: int, payload: 
     }
     if packet_type == "data":
         fields["payload"] = payload
+    # The checksum covers the packet fields but not the checksum field itself.
     checksum = zlib.crc32(_canonical_bytes(fields)) & 0xFFFFFFFF
     packet = dict(fields)
     packet["crc32"] = f"{checksum:08x}"
     return _canonical_bytes(packet)
 
 
+# Decode a datagram and reject it if its checksum or fields are invalid.
 def decode_packet(datagram: bytes) -> dict[str, Any]:
+    # Parse the JSON first so the checksum can be checked on its original fields.
     try:
         packet = json.loads(datagram.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -57,6 +63,7 @@ def decode_packet(datagram: bytes) -> dict[str, Any]:
     actual = zlib.crc32(_canonical_bytes(packet)) & 0xFFFFFFFF
     if actual != expected:
         raise PacketError("CRC-32 mismatch")
+    # Validate packet meaning only after the CRC has been confirmed.
     packet_type = packet.get("type")
     run_id = packet.get("run_id")
     seq = packet.get("seq")

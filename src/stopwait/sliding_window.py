@@ -9,6 +9,7 @@ from .sender import TransferResult
 from .udp_link import Pacer
 
 
+# Keep several messages in flight and retransmit any unacknowledged packet on timeout.
 def send_messages(link, run_id: str, messages: list[str], window_size: int = 4,
                   timeout: float = 0.25, max_retries: int = 5,
                   rate: float = 100.0) -> TransferResult:
@@ -16,6 +17,7 @@ def send_messages(link, run_id: str, messages: list[str], window_size: int = 4,
         raise ValueError("messages, window size, timeout, and retry limit are invalid")
     started = time.monotonic()
     total = len(messages)
+    # base is the oldest unacknowledged sequence; next_to_send is the window end.
     base = 0
     next_to_send = 0
     acked: set[int] = set()
@@ -26,6 +28,7 @@ def send_messages(link, run_id: str, messages: list[str], window_size: int = 4,
     pacer = Pacer(rate)
 
     while base < total:
+        # Fill free window positions without sending beyond the current limit.
         while next_to_send < total and next_to_send < base + window_size:
             pacer.wait()
             link.send(encode_packet("data", run_id, next_to_send, total, messages[next_to_send]))
@@ -35,6 +38,7 @@ def send_messages(link, run_id: str, messages: list[str], window_size: int = 4,
             next_to_send += 1
 
         now = time.monotonic()
+        # Retry only outstanding packets whose individual timers have expired.
         expired = [seq for seq in range(base, next_to_send)
                    if seq not in acked and now - sent_at[seq] >= timeout]
         for seq in expired:
@@ -59,6 +63,7 @@ def send_messages(link, run_id: str, messages: list[str], window_size: int = 4,
         if packet["type"] == "ack" and packet["run_id"] == run_id and packet["total"] == total:
             seq = packet["seq"]
             if base <= seq < next_to_send:
+                # Slide the window past all consecutive acknowledgments.
                 acked.add(seq)
                 while base in acked:
                     acked.remove(base)

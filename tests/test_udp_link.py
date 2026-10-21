@@ -6,6 +6,7 @@ from stopwait.udp_link import UdpLink
 
 class UdpLinkTests(unittest.TestCase):
     def test_local_datagram_round_trip(self):
+        # Send one datagram between two real localhost UDP sockets.
         receiver = UdpLink(("127.0.0.1", 0))
         sender = UdpLink(("127.0.0.1", 0), receiver.local_address)
         try:
@@ -16,6 +17,7 @@ class UdpLinkTests(unittest.TestCase):
             receiver.close()
 
     def test_connection_reset_is_treated_as_lost_datagram(self):
+        # Simulate a Windows reset before the next datagram arrives.
         receiver = UdpLink(("127.0.0.1", 0))
         original_socket = receiver.socket
         mock_socket = Mock()
@@ -25,6 +27,7 @@ class UdpLinkTests(unittest.TestCase):
         ]
         receiver.socket = mock_socket
         try:
+            # The receive method should retry and return the next payload.
             self.assertEqual(receiver.recv(0.5), b"next packet")
             self.assertEqual(mock_socket.recvfrom.call_count, 2)
         finally:
