@@ -1,0 +1,103 @@
+{
+    "run_id":  "forced-drop-demo",
+    "seed":  410,
+    "hop_limit":  12,
+    "devices":  {
+                    "H1":  {
+                               "role":  "host",
+                               "virtual_address":  "10.0.0.1",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43101
+                                       },
+                               "neighbors":  [
+                                                 "RA"
+                                             ],
+                               "gateway":  "RA"
+                           },
+                    "H2":  {
+                               "role":  "host",
+                               "virtual_address":  "10.0.0.2",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43106
+                                       },
+                               "neighbors":  [
+                                                 "RD"
+                                             ],
+                               "gateway":  "RD"
+                           },
+                    "RA":  {
+                               "role":  "router",
+                               "virtual_address":  "10.0.0.11",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43102
+                                       },
+                               "neighbors":  [
+                                                 "H1",
+                                                 "RB",
+                                                 "RC"
+                                             ],
+                               "forwarding":  {
+                                                  "10.0.0.1":  "H1",
+                                                  "10.0.0.2":  "RB"
+                                              },
+                               "links":  {
+                                             "RB":  {
+                                                        "force_drop_first":  1,
+                                                        "seed":  77
+                                                    }
+                                         }
+                           },
+                    "RB":  {
+                               "role":  "router",
+                               "virtual_address":  "10.0.0.12",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43103
+                                       },
+                               "neighbors":  [
+                                                 "RA",
+                                                 "RD"
+                                             ],
+                               "forwarding":  {
+                                                  "10.0.0.1":  "RA",
+                                                  "10.0.0.2":  "RD"
+                                              }
+                           },
+                    "RC":  {
+                               "role":  "router",
+                               "virtual_address":  "10.0.0.13",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43104
+                                       },
+                               "neighbors":  [
+                                                 "RA",
+                                                 "RD"
+                                             ],
+                               "forwarding":  {
+                                                  "10.0.0.1":  "RA",
+                                                  "10.0.0.2":  "RD"
+                                              }
+                           },
+                    "RD":  {
+                               "role":  "router",
+                               "virtual_address":  "10.0.0.14",
+                               "udp":  {
+                                           "host":  "127.0.0.1",
+                                           "port":  43105
+                                       },
+                               "neighbors":  [
+                                                 "RB",
+                                                 "RC",
+                                                 "H2"
+                                             ],
+                               "forwarding":  {
+                                                  "10.0.0.1":  "RB",
+                                                  "10.0.0.2":  "H2"
+                                              }
+                           }
+                }
+}

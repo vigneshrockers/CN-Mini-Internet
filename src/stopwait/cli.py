@@ -15,22 +15,18 @@ from .sender import send_messages as send_stop_wait
 from .udp_link import UdpLink
 
 
-# Build the numbered messages used by the sender demonstrations.
 def _messages(count: int) -> list[str]:
     return [f"message-{seq:04d}" for seq in range(count)]
 
 
-# Print each trial result as one JSON line.
 def _print_rows(rows) -> None:
     for row in rows:
         print(json.dumps(row.as_dict(), sort_keys=True))
 
 
-# Set up the existing command names and their command-line options.
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="UDP transfer protocol demonstrations")
     sub = parser.add_subparsers(dest="command", required=True)
-    # These commands run the scripted evidence, comparison, and reorder cases.
     demo = sub.add_parser("evidence", help="run required loss, corruption, and bounded-failure cases")
     demo.add_argument("--count", type=int, default=8)
     compare = sub.add_parser("compare", help="repeat best-effort vs stop-and-wait comparison")
@@ -40,7 +36,6 @@ def _parser() -> argparse.ArgumentParser:
     compare.add_argument("--delay", type=float, default=0.01)
     reorder = sub.add_parser("reorder-demo", help="run optional sliding-window reordering demo")
     reorder.add_argument("--count", type=int, default=8)
-    # The endpoint commands support running sender and receiver in separate windows.
     receive = sub.add_parser("receive", help="listen for one UDP transfer")
     receive.add_argument("--host", default="0.0.0.0")
     receive.add_argument("--port", type=int, required=True)
@@ -66,10 +61,8 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-# Run the selected transfer demo or endpoint command.
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    # Return failure if a required evidence case does not recover as expected.
     if args.command == "evidence":
         rows = run_required_evidence(args.count)
         _print_rows(rows)
@@ -95,7 +88,6 @@ def main(argv: list[str] | None = None) -> int:
         raw = UdpLink((args.host, args.port), (args.peer_host, args.peer_port))
         messages = _messages(args.count)
         try:
-            # Reuse the same link setup while selecting the requested sender mode.
             if args.mode == "best-effort":
                 result = best_effort.send_messages(raw, run_id, messages, args.rate)
                 time.sleep(args.observation_timeout)

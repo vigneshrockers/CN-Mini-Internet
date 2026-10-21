@@ -14,9 +14,7 @@ from .simulated_link import ImpairedUdpLink, ImpairmentPolicy
 from .udp_link import UdpLink
 
 
-# Create connected local UDP endpoints with impairment wrappers on both directions.
 def _local_pair(policy: ImpairmentPolicy, base_delay: float = 0.0):
-    # Port zero lets the operating system choose free local ports for the test.
     rx_raw = UdpLink(("127.0.0.1", 0))
     tx_raw = UdpLink(("127.0.0.1", 0), rx_raw.local_address)
     rx_raw.set_peer(tx_raw.local_address)
@@ -25,7 +23,6 @@ def _local_pair(policy: ImpairmentPolicy, base_delay: float = 0.0):
     return tx, rx
 
 
-# Run one transfer mode and collect what the sender and receiver observed.
 def run_trial(mode: str, loss_rate: float = 0.0, seed: int = 1,
               repetition: int = 1, count: int = 20, timeout: float = 0.15,
               max_retries: int = 5, rate: float = 100.0, window_size: int = 4,
@@ -38,14 +35,12 @@ def run_trial(mode: str, loss_rate: float = 0.0, seed: int = 1,
     messages = [f"message-{seq:04d}" for seq in range(count)]
     policy = ImpairmentPolicy(loss_rate, seed, drop_once, corrupt_once, delay_once)
     if reachable:
-        # The regular cases use a receiver thread on the paired local socket.
         tx, rx = _local_pair(policy, base_delay)
         receiver = Receiver(rx, run_id, count, linger=max(0.4, timeout * (max_retries + 2)),
                             idle_timeout=max(5.0, observation_timeout + count / rate + base_delay * 2))
         thread = threading.Thread(target=receiver.run, daemon=True)
         thread.start()
     else:
-        # A closed local port represents a receiver that cannot be reached.
         rx = None
         receiver = None
         thread = None
@@ -57,7 +52,6 @@ def run_trial(mode: str, loss_rate: float = 0.0, seed: int = 1,
 
     started = time.monotonic()
     try:
-        # Select one sender mode while reusing the same generated workload.
         if mode == "best-effort":
             result = best_effort.send_messages(tx, run_id, messages, rate)
             if thread is not None:
@@ -81,7 +75,6 @@ def run_trial(mode: str, loss_rate: float = 0.0, seed: int = 1,
         else:
             raise ValueError(f"unknown mode: {mode}")
     finally:
-        # Release sockets and worker resources on both success and failure.
         tx.close()
         if rx is not None:
             rx.close()
@@ -93,9 +86,7 @@ def run_trial(mode: str, loss_rate: float = 0.0, seed: int = 1,
                                  receiver.invalid_packets if receiver else 0)
 
 
-# Run the baseline, loss, lost-ACK, corruption, and unreachable cases.
 def run_required_evidence(count: int = 8) -> list[TrialMetrics]:
-    # Each seed and one-time impairment makes its scenario repeatable.
     return [
         run_trial("stop-and-wait", count=count, seed=1),
         run_trial("stop-and-wait", count=count, seed=2,
@@ -108,11 +99,9 @@ def run_required_evidence(count: int = 8) -> list[TrialMetrics]:
     ]
 
 
-# Repeat best-effort and stop-and-wait trials at each requested loss level.
 def run_comparison(repetitions: int = 3, count: int = 20, loss_levels=(0.0, 0.05),
                    rate: float = 100.0, base_delay: float = 0.01) -> list[TrialMetrics]:
     rows: list[TrialMetrics] = []
-    # Hold the workload constant while varying mode, loss, and trial number.
     for loss in loss_levels:
         for mode in ("best-effort", "stop-and-wait"):
             for repetition in range(1, repetitions + 1):
@@ -122,7 +111,6 @@ def run_comparison(repetitions: int = 3, count: int = 20, loss_levels=(0.0, 0.05
     return rows
 
 
-# Delay one data packet to demonstrate ordered delivery with a sliding window.
 def run_reorder_demo(count: int = 8) -> TrialMetrics:
     return run_trial("sliding-window", count=count, timeout=0.25, window_size=4,
                      delay_once=("sender_to_receiver", "data", 0, 0.10))

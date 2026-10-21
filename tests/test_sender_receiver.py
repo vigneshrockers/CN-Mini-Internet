@@ -10,7 +10,6 @@ from stopwait.udp_link import UdpLink
 
 class TransferTests(unittest.TestCase):
     def make_pair(self, policy=None):
-        # Connect two ephemeral localhost sockets through impairment wrappers.
         policy = policy or ImpairmentPolicy()
         rx_raw = UdpLink(("127.0.0.1", 0))
         tx_raw = UdpLink(("127.0.0.1", 0), rx_raw.local_address)
@@ -19,7 +18,6 @@ class TransferTests(unittest.TestCase):
                 ImpairedUdpLink(rx_raw, policy, "receiver_to_sender"))
 
     def test_stop_and_wait_delivers_once_in_order(self):
-        # Run the receiver while the sender waits for acknowledgments.
         tx, rx = self.make_pair()
         run_id = str(uuid.uuid4())
         receiver = Receiver(rx, run_id, 4, linger=0.1)
@@ -28,7 +26,6 @@ class TransferTests(unittest.TestCase):
         try:
             result = send_messages(tx, run_id, ["a", "b", "c", "d"], timeout=0.1, rate=1000)
             thread.join(1)
-            # Delivery should complete once and preserve the original order.
             self.assertTrue(result.completed)
             self.assertEqual(receiver.delivered, ["a", "b", "c", "d"])
         finally:

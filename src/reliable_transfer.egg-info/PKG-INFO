@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: reliable-transfer
+Version: 1.0.0
+Summary: UDP best-effort, stop-and-wait, and optional sliding-window transfer demo
+Requires-Python: >=3.10
